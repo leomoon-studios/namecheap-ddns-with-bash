@@ -1,0 +1,68 @@
+#!/bin/bash
+if [ $(id -u) -ne 0 ]; then #checking root
+  echo -ne "\033[31m [x] Script must be run as root. Try \"sudo ./`basename $0`\"\e[39m\n"
+  exit 1
+fi
+
+############################################################################
+########## INFO ############################################################
+############################################################################
+### ABOUT:
+####### This script will setup ddns with cron using namecheap.com on Ubuntu
+### AUTOHR:
+####### Amin Babaeipanah
+### VERSION:
+####### 1.00
+### CHANGELOG:
+####### Initial release
+### USAGE:
+####### Get a domain from namecheap.com
+####### Enable dynamic dns in YourDomain.TLD > Advanced DNS
+####### Delete the default two host records
+####### Add A + dynamic dns record
+#######     Host field
+#######         Type a custom subdomain if you want to use a subdomain as dynamic dns
+#######         Type "@" if you want to use the domain as dynamic dns
+#######     Value field
+#######         Type 1.1.1.1
+####### Open ddns.bat
+####### Change the ddnsUrl variable with your newly purchased domain in VARIABLES TO CHANGE section
+####### Change the host variable with the subdomain you chose (or "@") in VARIABLES TO CHANGE section
+####### Copy the dynamic dns password and change the ddnsPass variable in VARIABLES TO CHANGE section
+####### Run "chmod +x scriptName" to make it executable
+####### Run it using "sudo ./scriptName"
+####### Follow on-screen instructions
+
+############################################################################
+########## VARIABLES TO CHANGE #############################################
+############################################################################
+ddnsUrl='yourdomain.tld' #get a domain from namecheap.com
+ddnsHost='subdomain' #if no subdomain, host will be "@"
+ddnsPass='dynamicdnsPassword' #this is the namecheap ddns password
+
+############################################################################
+########## MOTDVARS ########################################################
+############################################################################
+setupDir="$(dirname $(readlink -f $0))"
+echo 'ddnsUrl='$ddnsUrl >> $setupDir/motdvars
+echo 'ddnsHost='$ddnsHost >> $setupDir/motdvars
+
+############################################################################
+########## START ###########################################################
+############################################################################
+echo '#!/bin/bash' > /usr/sbin/lmdnsu
+echo 'wget -O - -q "https://dynamicdns.park-your-domain.com/update?host='$ddnsHost'&domain='$ddnsUrl'&password='$ddnsPass'&ip="`wget -O - -q "https://dynamicdns.park-your-domain.com/getip"`' >> /usr/sbin/lmdnsu
+echo 'echo -e "\n"' >> /usr/sbin/lmdnsu
+chmod +x /usr/sbin/lmdnsu
+echo '#!/bin/bash' > /usr/sbin/lmdnsc
+echo 'wget -O - -q "https://dynamicdns.park-your-domain.com/update?host='$ddnsHost'&domain='$ddnsUrl'&password='$ddnsPass'&ip="`wget -O - -q "https://dynamicdns.park-your-domain.com/getip"` > /dev/null' >> /usr/sbin/lmdnsc
+chmod +x /usr/sbin/lmdnsc
+crontab -l > /tmp/cronjob; echo '*/5 * * * * /usr/sbin/lmdnsc #every 5 mins' >> /tmp/cronjob; crontab /tmp/cronjob
+
+############################################################################
+########## FINISHING #######################################################
+############################################################################
+echo -ne "\033[32m [i] DDNS setup is done.\e[39m\n"
+echo -ne "\033[32m         DDNS will update every 5 minutes.\e[39m\n"
+echo -ne "\033[32m         To update DDNS manually, use \"sudo lmdnsu\".\e[39m\n"
+sleep 5
