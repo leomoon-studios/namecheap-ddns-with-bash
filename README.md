@@ -1,0 +1,1 @@
+# namecheap-ddns-with-bash
